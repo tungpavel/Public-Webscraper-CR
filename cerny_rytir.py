@@ -47,7 +47,6 @@ def load_list(path):
 def init_driver():
     driver = webdriver.Chrome()
     driver.get("https://cernyrytir.cz/")
-
     return driver
 
 # Find "Seach button", CTRL+A and type the name of the card
@@ -63,14 +62,18 @@ def search_card(card):
 
 def find_lowest_price(tag,name,price,stock):
     # Loop through the font tags with custom index starting from 1, 2, and 3
+    # The cards are repeated every 3 values. e.g. name 1, price 1, stock 1, name 2, price 2, stock 2
     for n in range(3):
         for index, font_tag in enumerate(tag, start=n):
             if index % 3 == 0:
                 value = font_tag.get_text().strip()
+                # Get card name
                 if n == 0:
                     name.append(value)
+                # Get card price
                 elif n == 1:
                     price.append(value)
+                # Get card stock
                 elif n == 2:
                     stock.append(value)
                 else:
@@ -78,10 +81,16 @@ def find_lowest_price(tag,name,price,stock):
 
 # Take the last value only (The lowest)
 def append_final(name,price,stock):
-    final_card_name.append(name[-1])
-    final_card_price.append(price[-1])
-    final_card_stock.append(stock[-1])
+    index_to_append = get_first_non_zero_from_end(stock)
+    final_card_name.append(name[index_to_append])
+    final_card_price.append(price[index_to_append])
+    final_card_stock.append(stock[index_to_append])
 
+def get_first_non_zero_from_end(lst):
+    for idx, value in enumerate(reversed(lst)):
+        if value[0] != "0":
+            return len(lst) - 1 - idx
+        
 def get_prices(list_, driver):
     for card in list_:
         card_name = []
@@ -108,24 +117,19 @@ def get_prices(list_, driver):
         except Exception as e:
             print(f"An error occurred while processing '{card}': {e}")
 
-
-
 def create_df(name,price,stock):
     dataframe = {
     "Card Name": name,
     "Card Price": price,
     "Card Stock": stock
     }
-
     df = pd.DataFrame(dataframe)
     # Add today's date
     df['Date'] = datetime.today().date()
-
     return df
 
-
 if __name__ == "__main__":
-    card_list = load_list(r'Tajic fr.xlsx')
+    card_list = load_list(r'mtg list.xlsx')
     loop_cards = card_list.iloc[:,0].tolist()
 
     driver = init_driver()
@@ -143,7 +147,7 @@ if __name__ == "__main__":
         card_stock = final_card_stock[card]
         check_and_insert(card_name, card_price, card_stock)
 
-            # Close the WebDriver
+    # Close the WebDriver
     driver.quit()
 
     # Close the database connection
