@@ -40,7 +40,7 @@ def check_and_insert(card_name, new_price, new_stock):
         print(f"Inserted new entry for {card_name} with price {new_price} and stock {new_stock}")
 
 def load_list(path):
-    list =  pd.read_excel(path)
+    list =  pd.read_csv(path)
     return list
 
 # Initialize the WebDriver
@@ -129,7 +129,7 @@ def create_df(name,price,stock):
     return df
 
 if __name__ == "__main__":
-    card_list = load_list(r'mtg list.xlsx')
+    card_list = load_list(r'mtg list.csv')
     loop_cards = card_list.iloc[:,0].tolist()
 
     driver = init_driver()
