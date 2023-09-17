@@ -6,6 +6,13 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
 import sqlite3
+import logging
+
+# Configure logging
+logging.basicConfig(filename='log_CR_cards.log', level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
+
+logging.info(f"Script ran on {datetime.now()}")
+
 
 # Initialize the SQLite database connection
 db_connection = sqlite3.connect('card_data.db')
@@ -37,10 +44,10 @@ def check_and_insert(card_name, new_price, new_stock):
         cursor.execute(insert_query, (card_name, new_price, new_stock, current_datetime))
         db_connection.commit()
 
-        print(f"Inserted new entry for {card_name} with price {new_price} and stock {new_stock}")
+        logging.info(f"Inserted new entry for {card_name} with price {new_price} and stock {new_stock}")
 
 def load_list(path):
-    list =  pd.read_csv(path)
+    list =  pd.read_csv(path,header=0)
     return list
 
 # Initialize the WebDriver
@@ -129,7 +136,7 @@ def create_df(name,price,stock):
     return df
 
 if __name__ == "__main__":
-    card_list = load_list(r'mtg list.csv')
+    card_list = load_list(r"mtg list.csv")
     loop_cards = card_list.iloc[:,0].tolist()
 
     driver = init_driver()
@@ -152,3 +159,5 @@ if __name__ == "__main__":
 
     # Close the database connection
     db_connection.close()
+
+    df.to_csv("MTG Collected Prices.csv")
