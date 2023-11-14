@@ -63,6 +63,27 @@ Copy code
 
 3. Check the generated DataFrame for analysis.
 
+## Install pipx and virtualenv
+* In the command line, type 
+```
+py -m pip install --user pipx
+py -m pipx ensurepath
+py -m pipx install virtualenv
+```
+
+## Clone this repository 
+* Navigate to the directory you want to clone to `cd <dir>` e.g. `cd "C:\Users\John Smith\Python\"`
+* Clone this repo: `git clone git@github.com:tungpavel/WebScraping-LetsRecycle-.git`
+
+## Set up virtual environment
+* Navigate to the repo location `cd <dir>` e.g. `cd "C:\Users\John Smith\Python\Data-Team-Utilities"` - if continuing form the previous step, just type `cd Data-Team-Utilities`
+* Run the following commands (you can replace "venv" with a meaningful name if you like).
+```
+virtualenv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+```
+
 ## Contributing
 
 Contributions are welcome! If you find a bug or want to enhance the script, feel free to submit a pull request.
