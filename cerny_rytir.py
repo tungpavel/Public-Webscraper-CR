@@ -9,7 +9,7 @@ import sqlite3
 import logging
 
 # Configure logging
-logging.basicConfig(filename='log_CR_cards.log', level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
+logging.basicConfig(filename='C:/Users/tungp/OneDrive/Projects/GitHub/Public-Webscraper-CR/log_CR_cards.log', level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
 
 logging.info(f"Script ran on {datetime.now()}")
 
@@ -136,7 +136,7 @@ def create_df(name,price,stock):
     return df
 
 if __name__ == "__main__":
-    card_list = load_list(r"mtg list.csv")
+    card_list = load_list(r"C:/Users/tungp/OneDrive/Projects/GitHub/Public-Webscraper-CR/mtg list.csv")
     loop_cards = card_list.iloc[:,0].tolist()
 
     driver = init_driver()
