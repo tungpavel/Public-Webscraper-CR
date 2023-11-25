@@ -22,6 +22,7 @@ cursor = db_connection.cursor()
 create_table_query = '''
     CREATE TABLE IF NOT EXISTS card_data (
     id INTEGER PRIMARY KEY,
+    real_name TEXT NOT NULL,
     card_name TEXT NOT NULL,
     card_price REAL NOT NULL,
     card_stock TEXT NOT NULL,
@@ -31,20 +32,24 @@ create_table_query = '''
 cursor.execute(create_table_query)
 db_connection.commit()
 
-def check_and_insert(card_name, new_price, new_stock):
+def check_and_insert(real_name, card_name, new_price, new_stock):
     # Check if the price has changed for the card
     select_query = "SELECT card_price FROM card_data WHERE card_name = ? ORDER BY entry_date DESC LIMIT 1"
-    cursor.execute(select_query, (card_name,))
+    for name in real_name:
+        cursor.execute(select_query, (name,))
+
     latest_price = cursor.fetchone()
     
     if latest_price is None or new_price != latest_price[0]:
         # Price has changed or it's the first entry
-        insert_query = "INSERT INTO card_data (card_name, card_price, card_stock, entry_date) VALUES (?, ?, ?, ?)"
+        insert_query = "INSERT INTO card_data (real_name, card_name, card_price, card_stock, entry_date) VALUES (?, ?, ?, ?, ?)"
         current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        cursor.execute(insert_query, (card_name, new_price, new_stock, current_datetime))
+        for name in real_name:
+            cursor.execute(insert_query, (name, card_name, new_price, new_stock, current_datetime))
+
         db_connection.commit()
 
-        logging.info(f"Inserted new entry for {card_name} with price {new_price} and stock {new_stock}")
+        logging.info(f"Inserted new entry for {real_name} with price {new_price} and stock {new_stock}")
 
 def load_list(path):
     list =  pd.read_csv(path,header=0)
@@ -87,8 +92,12 @@ def find_lowest_price(tag,name,price,stock):
                     "Error"
 
 # Take the last value only (The lowest)
-def append_final(name,price,stock):
+def append_final(real_name,name,price,stock):
     index_to_append = get_first_non_zero_from_end(stock)
+    print(f"index_to_append: {index_to_append}")
+    if index_to_append != None:
+        final_real_name.append(real_name)
+        
     final_card_name.append(name[index_to_append])
     final_card_price.append(price[index_to_append])
     final_card_stock.append(stock[index_to_append])
@@ -100,6 +109,7 @@ def get_first_non_zero_from_end(lst):
         
 def get_prices(list_, driver):
     for card in list_:
+        real_name = []
         card_name = []
         card_price = []
         card_stock = []
@@ -117,15 +127,22 @@ def get_prices(list_, driver):
             font_tags = soup.findAll('font', style='font-weight : bolder;')
 
             find_lowest_price(font_tags, card_name, card_price, card_stock)
-            append_final(card_name, card_price, card_stock)
+            
+            # If no error, will append the real name
+            real_name.append(card)
+
+            # Append the final lists
+            append_final(real_name, card_name, card_price, card_stock)
+
 
         except NoSuchElementException:
             print(f"Card '{card}' not found on the website. Skipping...")
         except Exception as e:
-            print(f"An error occurred while processing '{card}': {e}")
+            print(f"An error occurred while processing '{card}': {e}") 
 
-def create_df(name,price,stock):
+def create_df(real_name,name,price,stock):
     dataframe = {
+    "Real Name": real_name,
     "Card Name": name,
     "Card Price": price,
     "Card Stock": stock
@@ -140,19 +157,21 @@ if __name__ == "__main__":
     loop_cards = card_list.iloc[:,0].tolist()
 
     driver = init_driver()
+    final_real_name = []
     final_card_name = []
     final_card_price = []
     final_card_stock = []
     get_prices(loop_cards,driver)
 
-    df = create_df(final_card_name,final_card_price,final_card_stock)
+    df = create_df(final_real_name,final_card_name,final_card_price,final_card_stock)
 
     # Insert new data into the database
-    for card in range(len(final_card_name)):
+    for card in range(len(final_real_name)):
+        real_name = final_real_name[card]
         card_name = final_card_name[card]
         card_price = final_card_price[card]
         card_stock = final_card_stock[card]
-        check_and_insert(card_name, card_price, card_stock)
+        check_and_insert(real_name, card_name, card_price, card_stock)
 
     # Close the WebDriver
     driver.quit()
