@@ -94,7 +94,6 @@ def find_lowest_price(tag,name,price,stock):
 # Take the last value only (The lowest)
 def append_final(real_name,name,price,stock):
     index_to_append = get_first_non_zero_from_end(stock)
-    print(f"index_to_append: {index_to_append}")
     if index_to_append != None:
         final_real_name.append(real_name)
         
@@ -152,6 +151,32 @@ def create_df(real_name,name,price,stock):
     df['Date'] = datetime.today().date()
     return df
 
+# Run this in the terminal
+def run_today():
+    query = f"""
+SELECT
+  real_name
+  card_price,
+  entry_date,
+  COALESCE(card_price - LEAD(card_price) OVER (PARTITION BY real_name ORDER BY entry_date DESC), 0) AS price_change,
+  COALESCE(round(CAST(card_price AS FLOAT) / LEAD(card_price) OVER (PARTITION BY real_name ORDER BY entry_date DESC), 2),1) AS change
+FROM
+  card_data
+WHERE real_name in (
+	SELECT real_name
+	FROM card_data
+	WHERE entry_date >= {datetime.today().date()})
+ORDER BY
+  real_name, entry_date DESC;
+"""
+
+    cursor.execute(query)
+    output = cursor.fetchall()
+    
+    for row in output:
+        print(row)
+
+
 if __name__ == "__main__":
     card_list = load_list(r"C:/Users/tungp/OneDrive/Projects/GitHub/Public-Webscraper-CR/mtg list.csv")
     loop_cards = card_list.iloc[:,0].tolist()
@@ -176,7 +201,12 @@ if __name__ == "__main__":
     # Close the WebDriver
     driver.quit()
 
+    # Run today's output
+    run_today()
+
     # Close the database connection
     db_connection.close()
+
+    input("Press Enter to exit.")
 
     df.to_csv("MTG Collected Prices.csv")

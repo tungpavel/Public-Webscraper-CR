@@ -1,6 +1,5 @@
 SELECT
-  real_name,
-  card_name,
+  real_name
   card_price,
   entry_date,
   COALESCE(card_price - LEAD(card_price) OVER (PARTITION BY real_name ORDER BY entry_date DESC), 0) AS price_change,
