@@ -34,7 +34,7 @@ db_connection.commit()
 
 def check_and_insert(real_name, card_name, new_price, new_stock):
     # Check if the price has changed for the card
-    select_query = "SELECT card_price FROM card_data WHERE card_name = ? ORDER BY entry_date DESC LIMIT 1"
+    select_query = "SELECT card_price FROM card_data WHERE real_name = ? ORDER BY entry_date DESC LIMIT 1"
     for name in real_name:
         cursor.execute(select_query, (name,))
 
@@ -43,7 +43,7 @@ def check_and_insert(real_name, card_name, new_price, new_stock):
     if latest_price is None or new_price != latest_price[0]:
         # Price has changed or it's the first entry
         insert_query = "INSERT INTO card_data (real_name, card_name, card_price, card_stock, entry_date) VALUES (?, ?, ?, ?, ?)"
-        current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        current_datetime = datetime.now().strftime("%Y-%m-%d")
         for name in real_name:
             cursor.execute(insert_query, (name, card_name, new_price, new_stock, current_datetime))
 
@@ -155,7 +155,7 @@ def create_df(real_name,name,price,stock):
 def run_today():
     query = f"""
 SELECT
-  real_name
+  real_name,
   card_price,
   entry_date,
   COALESCE(card_price - LEAD(card_price) OVER (PARTITION BY real_name ORDER BY entry_date DESC), 0) AS price_change,
@@ -165,7 +165,7 @@ FROM
 WHERE real_name in (
 	SELECT real_name
 	FROM card_data
-	WHERE entry_date >= {datetime.today().date()})
+	WHERE entry_date like "{datetime.today().date()}%")
 ORDER BY
   real_name, entry_date DESC;
 """
