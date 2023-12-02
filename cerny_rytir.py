@@ -7,34 +7,19 @@ import pandas as pd
 from datetime import datetime
 import sqlite3
 import logging
+import configparser
 
-# Configure logging
-logging.basicConfig(filename='C:/Users/tungp/OneDrive/Projects/GitHub/Public-Webscraper-CR/log_CR_cards.log', level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
+def get_file_path():
+    config = configparser.ConfigParser()
+    config.read('config.ini')
 
-logging.info(f"Script ran on {datetime.now()}")
+    data_file_path = config.get('Paths', 'data_file_path')
 
-
-# Initialize the SQLite database connection
-db_connection = sqlite3.connect('card_data.db')
-cursor = db_connection.cursor()
-
-# Define the SQL command to create a table if not exists
-create_table_query = '''
-    CREATE TABLE IF NOT EXISTS card_data (
-    id INTEGER PRIMARY KEY,
-    real_name TEXT NOT NULL,
-    card_name TEXT NOT NULL,
-    card_price REAL NOT NULL,
-    card_stock TEXT NOT NULL,
-    entry_date TEXT NOT NULL
-);
-'''
-cursor.execute(create_table_query)
-db_connection.commit()
+    return data_file_path
 
 def check_and_insert(real_name, card_name, new_price, new_stock):
     # Check if the price has changed for the card
-    select_query = "SELECT card_price FROM card_data WHERE real_name = ? ORDER BY entry_date DESC LIMIT 1"
+    select_query = "SELECT card_price FROM CR_data WHERE real_name = ? ORDER BY entry_date DESC LIMIT 1"
     for name in real_name:
         cursor.execute(select_query, (name,))
 
@@ -42,7 +27,7 @@ def check_and_insert(real_name, card_name, new_price, new_stock):
     
     if latest_price is None or new_price != latest_price[0]:
         # Price has changed or it's the first entry
-        insert_query = "INSERT INTO card_data (real_name, card_name, card_price, card_stock, entry_date) VALUES (?, ?, ?, ?, ?)"
+        insert_query = "INSERT INTO CR_data (real_name, card_name, card_price, card_stock, entry_date) VALUES (?, ?, ?, ?, ?)"
         current_datetime = datetime.now().strftime("%Y-%m-%d")
         for name in real_name:
             cursor.execute(insert_query, (name, card_name, new_price, new_stock, current_datetime))
@@ -159,26 +144,58 @@ SELECT
   card_price,
   entry_date,
   COALESCE(card_price - LEAD(card_price) OVER (PARTITION BY real_name ORDER BY entry_date DESC), 0) AS price_change,
-  COALESCE(round(CAST(card_price AS FLOAT) / LEAD(card_price) OVER (PARTITION BY real_name ORDER BY entry_date DESC), 2),1) AS change
+  COALESCE(round(CAST(card_price AS FLOAT) / LEAD(card_price) OVER (PARTITION BY real_name ORDER BY entry_date DESC), 2), 1) AS change
 FROM
-  card_data
-WHERE real_name in (
-	SELECT real_name
-	FROM card_data
-	WHERE entry_date like "{datetime.today().date()}%")
+  CR_data
+WHERE real_name IN (
+  SELECT real_name
+  FROM CR_data
+  WHERE entry_date = DATE('now')
+)
 ORDER BY
-  real_name, entry_date DESC;
+  entry_date DESC, real_name
+LIMIT (
+	SELECT count(*)
+	FROM CR_data
+	WHERE entry_date = DATE('now'))
 """
 
     cursor.execute(query)
     output = cursor.fetchall()
     
     for row in output:
-        print(row)
+        # Replace non-breaking space with a regular space
+        formatted_price = row[1].replace('\xa0', ' ')
+        # Print the formatted row
+        print((row[0], formatted_price, row[2], row[3], row[4]))
 
 
 if __name__ == "__main__":
-    card_list = load_list(r"C:/Users/tungp/OneDrive/Projects/GitHub/Public-Webscraper-CR/mtg list.csv")
+    main_path = get_file_path()
+
+    # Configure logging
+    logging.basicConfig(filename=f'{main_path}\log_CR_cards.log', level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
+    logging.info(f"Script ran on {datetime.now()}")
+
+    # Initialize the SQLite database connection
+    db_connection = sqlite3.connect(f'{main_path}\card_data.db')
+    cursor = db_connection.cursor()
+
+    # Define the SQL command to create a table if not exists
+    create_table_query = '''
+        CREATE TABLE IF NOT EXISTS CR_data (
+        id INTEGER PRIMARY KEY,
+        real_name TEXT NOT NULL,
+        card_name TEXT NOT NULL,
+        card_price REAL NOT NULL,
+        card_stock TEXT NOT NULL,
+        entry_date TEXT NOT NULL
+    );
+    '''
+    cursor.execute(create_table_query)
+    db_connection.commit()
+
+    card_list = load_list(r"mtg list.csv")
     loop_cards = card_list.iloc[:,0].tolist()
 
     driver = init_driver()
@@ -209,4 +226,4 @@ if __name__ == "__main__":
 
     input("Press Enter to exit.")
 
-    df.to_csv("MTG Collected Prices.csv")
+    # df.to_csv("MTG Collected Prices.csv")
