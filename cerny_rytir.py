@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
+from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
@@ -141,6 +142,7 @@ def run_today():
     query = f"""
 SELECT
   real_name,
+  card_name,
   card_price,
   entry_date,
   COALESCE(card_price - LEAD(card_price) OVER (PARTITION BY real_name ORDER BY entry_date DESC), 0) AS price_change,
