@@ -3,6 +3,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
@@ -43,7 +44,11 @@ def load_list(path):
 
 # Initialize the WebDriver
 def init_driver():
-    driver = webdriver.Chrome()
+    chrome_options = Options()
+    chrome_options.add_argument('--disable-logging')  # Suppresses logging
+    chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])  # Specifically suppresses ChromeDriver logs
+
+    driver = webdriver.Chrome(options=chrome_options)
     driver.get("https://cernyrytir.cz/")
     return driver
 
