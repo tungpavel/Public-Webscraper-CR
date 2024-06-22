@@ -10,6 +10,7 @@ from datetime import datetime
 import sqlite3
 import logging
 import configparser
+from tabulate import tabulate
 
 def get_file_path():
     config = configparser.ConfigParser()
@@ -144,37 +145,32 @@ def create_df(real_name,name,price,stock):
 
 # Run this in the terminal
 def run_today():
-    query = f"""
-SELECT
-  real_name,
-  card_name,
-  card_price,
-  entry_date,
-  COALESCE(card_price - LEAD(card_price) OVER (PARTITION BY real_name ORDER BY entry_date DESC), 0) AS price_change,
-  COALESCE(round(CAST(card_price AS FLOAT) / LEAD(card_price) OVER (PARTITION BY real_name ORDER BY entry_date DESC), 2), 1) AS change
-FROM
-  CR_data
-WHERE real_name IN (
-  SELECT real_name
-  FROM CR_data
-  WHERE entry_date = DATE('now')
-)
-ORDER BY
-  entry_date DESC, real_name
-LIMIT (
-	SELECT count(*)
-	FROM CR_data
-	WHERE entry_date = DATE('now'))
-"""
-
+    query = """
+    WITH LatestCardData AS (
+        SELECT *,
+               ROW_NUMBER() OVER (PARTITION BY real_name ORDER BY entry_date DESC) AS rn,
+               COALESCE(card_price - LEAD(card_price) OVER (PARTITION BY real_name ORDER BY entry_date DESC), 0) AS price_change
+        FROM CR_data
+    )
+    SELECT entry_date, real_name, card_name, card_price, price_change
+    FROM LatestCardData
+    WHERE rn = 1 AND entry_date = DATE('now')
+    ORDER BY real_name
+    """
     cursor.execute(query)
     output = cursor.fetchall()
-    
-    for row in output:
-        # Replace non-breaking space with a regular space
-        formatted_price = row[1].replace('\xa0', ' ')
-        # Print the formatted row
-        print((row[0], formatted_price, row[2], row[3], row[4]))
+
+    # Replace non-breaking spaces with regular spaces and prepare data for tabulate
+    formatted_output = [(row[0], row[1].replace('\xa0', ' '), row[2], row[3], row[4]) for row in output]
+
+    # Define the headers
+    headers = [ 'Entry Date','Real Name', 'Card Name', 'Card Price', 'Price Change']
+
+    # Format the output as a table using tabulate
+    table = tabulate(formatted_output, headers, tablefmt='grid')
+
+    # Print the formatted table
+    print(table)
 
 
 if __name__ == "__main__":
